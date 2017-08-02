@@ -2,7 +2,7 @@
 test your agent's strength against a set of known agents using tournament.py
 and include the results in your report.
 """
-import random
+import time
 
 
 class SearchTimeout(Exception):
@@ -112,11 +112,81 @@ class IsolationPlayer:
         positive value large enough to allow the function to return before the
         timer expires.
     """
+
     def __init__(self, search_depth=3, score_fn=custom_score, timeout=10.):
         self.search_depth = search_depth
         self.score = score_fn
         self.time_left = None
         self.TIMER_THRESHOLD = timeout
+
+    def terminal_test(self, game):
+        """
+        Parameters
+        ----------
+        game : isolation.Board
+            An instance of the Isolation game `Board` class representing the
+            current game state
+
+        Returns
+        -------
+        bool
+            Return True if the game is over for the active player
+            and False otherwise.
+        """
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
+
+        return not bool(game.get_legal_moves())
+
+    def min_value(self, game):
+        """
+        Parameters
+        ----------
+        game : isolation.Board
+            An instance of the Isolation game `Board` class representing the
+            current game state
+
+        Returns
+        -------
+        float
+            Return the value for a win (+1) if the game is over,
+            otherwise return the minimum value over all legal child
+            nodes.
+        """
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
+
+        if self.terminal_test(game):
+            return 1
+        v = float("inf")
+        for m in game.get_legal_moves():
+            v = min(v, self.max_value(game.forecast_move(m)))
+        return v
+
+    def max_value(self, game):
+        """
+        Parameters
+        ----------
+        game : isolation.Board
+            An instance of the Isolation game `Board` class representing the
+            current game state
+
+        Returns
+        -------
+        float
+            Return the value for a loss (-1) if the game is over,
+            otherwise return the maximum value over all legal child
+            nodes.
+        """
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
+
+        if self.terminal_test(game):
+            return -1
+        v = float("-inf")
+        for m in game.get_legal_moves():
+            v = max(v, self.min_value(game.forecast_move(m)))
+        return v
 
 
 class MinimaxPlayer(IsolationPlayer):
@@ -124,6 +194,43 @@ class MinimaxPlayer(IsolationPlayer):
     search. You must finish and test this player to make sure it properly uses
     minimax to return a good move before the search time limit expires.
     """
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        """init hashtable for all generated board positions,
+        eg: ($hash: ($positionInTree, isolation.Board), ...)
+        init list which will represent tree of positions,
+        eg: [$hash1:[$hash11:[$hash111:...], ..., $hash1n:[$hash1n1:...]]]
+        """
+        self._all_positions = dict()
+        self._tree = list()
+
+    def build_all_positions(self, game):
+
+        """
+        Parameters
+        ----------
+        game : `isolation.Board`
+            An instance of `isolation.Board` encoding the current state of the
+            game (e.g., player locations and blocked cells).
+        """
+
+        if self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
+
+        t_orig = 0
+        if len(self._all_positions) == 0:
+            t_orig = time.perf_counter()
+            hash = game.hash()
+            self._all_positions[hash] = game
+
+        for move in game.get_legal_moves():
+            game_clone_with_move = game.forecast_move(move)
+            hash = game_clone_with_move.hash()
+            self._all_positions[hash] = game_clone_with_move
+            self.build_all_positions(game_clone_with_move)
+
+        print(time.perf_counter() - t_orig)
 
     def get_move(self, game, time_left):
         """Search for the best move from the available legal moves and return a
@@ -165,6 +272,7 @@ class MinimaxPlayer(IsolationPlayer):
             return self.minimax(game, self.search_depth)
 
         except SearchTimeout:
+            print("SearchTimeout")
             pass  # Handle any actions required after timeout as needed
 
         # Return the best move from the last completed search iteration
@@ -212,8 +320,9 @@ class MinimaxPlayer(IsolationPlayer):
         if self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
-        # TODO: finish this function!
-        raise NotImplementedError
+        self.max_value(game)
+
+        return -1, -1
 
 
 class AlphaBetaPlayer(IsolationPlayer):
