@@ -10,15 +10,65 @@ import game_agent
 
 from importlib import reload
 
+basic_player_1 = "Player1"
+basic_player_2 = "Player2"
+
 
 class IsolationTest(unittest.TestCase):
     """Unit tests for isolation agents"""
 
+    def setup_game(self, p1, p2):
+        self.p1 = p1
+        self.p2 = p2
+        self.game = isolation.Board(self.p1, self.p2)
+
     def setUp(self):
         reload(game_agent)
-        self.player1 = "Player1"
-        self.player2 = "Player2"
-        self.game = isolation.Board(self.player1, self.player2)
+
+    def test_player2_moves_after_player1(self):
+        self.setup_game(basic_player_1, basic_player_2)
+        self.game.apply_move((2, 3))
+        self.assertTrue(self.p2 == self.game.active_player)
+
+    def test_player1_loses_when_no_moves_available(self):
+        """      0   1   2   3   4   5   6
+            0  | - | - | - | - | - | - | - |
+            1  | - | - | - | - | - | - | - |
+            2  | - | - | - | - | - | - | 1 |
+            3  | - | - | - | - | - | - | 2 |
+            4  | - | - | - | - | - | - |   |
+            5  | - | - | - | - | - | - |   |
+            6  | - | - | - | - | - | - |   |
+            """
+        self.setup_game(basic_player_1, basic_player_2)
+        # fill board with moves until player1 has nowhere to move
+        filling_moves = [(i, j) for j in range(self.game.width) for i in range(self.game.height)]
+        del filling_moves[-3:]
+        for m in filling_moves:
+            self.game.apply_move(m)
+        self.assertTrue(self.p1 == self.game.active_player)
+        self.assertTrue(self.game.is_loser(self.p1))
+        self.assertTrue(self.game.is_winner(self.p2))
+
+    def test_player2_loses_when_no_moves_available(self):
+        """      0   1   2   3   4   5   6
+            0  | - | - | - | - | - | - | - |
+            1  | - | - | - | - | - | - | - |
+            2  | - | - | - | - | - | - | - |
+            3  | - | - | - | - | - | - | 2 |
+            4  | - | - | - | - | - | - | 1 |
+            5  | - | - | - | - | - | - |   |
+            6  | - | - | - | - | - | - |   |
+            """
+        self.setup_game(basic_player_1, basic_player_2)
+        # fill board with moves until player1 has nowhere to move
+        filling_moves = [(i, j) for j in range(self.game.width) for i in range(self.game.height)]
+        del filling_moves[-2:]
+        for m in filling_moves:
+            self.game.apply_move(m)
+        self.assertTrue(self.p2 == self.game.active_player)
+        self.assertTrue(self.game.is_loser(self.p2))
+        self.assertTrue(self.game.is_winner(self.p1))
 
 
 if __name__ == '__main__':
