@@ -134,7 +134,7 @@ class IsolationPlayer:
         """
         return not bool(game.get_legal_moves())
 
-    def min_value(self, game, depth):
+    def min_value(self, game, depth, alpha=None, beta=None):
         """
         Parameters
         ----------
@@ -160,15 +160,17 @@ class IsolationPlayer:
         if self.terminal_test(game):
             return v
 
+        scores = list()
         for m in game.get_legal_moves():
             forecast = game.forecast_move(m)
             if depth < 1:
-                v = min(v, self.score(forecast, forecast.active_player))
+                score = self.score(forecast, forecast.active_player)
             else:
-                v = min(v, self.max_value(forecast, depth - 1))
-        return v
+                score = self.max_value(forecast, depth - 1, alpha, beta)
+            scores.append(score)
+        return min(scores)
 
-    def max_value(self, game, depth):
+    def max_value(self, game, depth, alpha=None, beta=None):
         """
         Parameters
         ----------
@@ -194,13 +196,15 @@ class IsolationPlayer:
         if self.terminal_test(game):
             return v
 
+        scores = list()
         for m in game.get_legal_moves():
             forecast = game.forecast_move(m)
             if depth < 1:
-                v = max(v, self.score(forecast, forecast.inactive_player))
+                score = self.score(forecast, forecast.inactive_player)
             else:
-                v = max(v, self.min_value(forecast, depth - 1))
-        return v
+                score = self.min_value(forecast, depth - 1, alpha, beta)
+            scores.append(score)
+        return max(scores)
 
 
 class MinimaxPlayer(IsolationPlayer):
@@ -253,9 +257,10 @@ class MinimaxPlayer(IsolationPlayer):
 
         except SearchTimeout:
             print("SearchTimeout")
-            pass  # Handle any actions required after timeout as needed
+            moves = game.get_legal_moves()
+            if len(moves) > 0:
+                best_move = moves[0]  # whatever move to keep playing
 
-        # Return the best move from the last completed search iteration
         return best_move
 
     def minimax(self, game, depth):
@@ -321,6 +326,9 @@ class AlphaBetaPlayer(IsolationPlayer):
     make sure it returns a good move before the search time limit expires.
     """
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
     def get_move(self, game, time_left):
         """Search for the best move from the available legal moves and return a
         result before the time limit expires.
@@ -353,8 +361,23 @@ class AlphaBetaPlayer(IsolationPlayer):
         """
         self.time_left = time_left
 
-        # TODO: finish this function!
-        raise NotImplementedError
+        # Initialize the best move so that this function returns something
+        # in case the search fails due to timeout
+        best_move = (-1, -1)
+
+        try:
+            # The try/except block will automatically catch the exception
+            # raised when the timer is about to expire.
+            depth = 1
+            while True:
+                best_move = self.alphabeta(game, depth)
+                depth += 1
+
+        except SearchTimeout:
+            print("SearchTimeout")
+            pass
+
+        return best_move
 
     def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf")):
         """Implement depth-limited minimax search with alpha-beta pruning as
@@ -401,8 +424,19 @@ class AlphaBetaPlayer(IsolationPlayer):
                 each helper function or else your agent will timeout during
                 testing.
         """
-        if self.time_left() < self.TIMER_THRESHOLD:
+        best_move = (-1, -1)
+
+        if callable(self.time_left) and self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
-        # TODO: finish this function!
-        raise NotImplementedError
+        if depth > 0:
+            values = list()
+            for m in game.get_legal_moves():
+                g = game.forecast_move(m)
+                val = (self.min_value(g, depth - 1, alpha, beta), m)
+                values.append(val)
+            min_values = list(map(lambda v: v[0], values))
+            max_index = min_values.index(max(min_values))
+            best_move = values[max_index][1]
+
+        return best_move
