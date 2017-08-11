@@ -2,8 +2,6 @@
 test your agent's strength against a set of known agents using tournament.py
 and include the results in your report.
 """
-import time
-
 
 class SearchTimeout(Exception):
     """Subclass base exception for code clarity. """
@@ -144,6 +142,10 @@ class IsolationPlayer:
         depth : int
             Depth is an integer representing the maximum number of plies to
             search from this point
+        alpha : float
+            Alpha limits the lower bound of search on minimizing layers
+        beta : float
+            Beta limits the upper bound of search on maximizing layers
 
         Returns
         -------
@@ -168,6 +170,11 @@ class IsolationPlayer:
             else:
                 score = self.max_value(forecast, depth - 1, alpha, beta)
             scores.append(score)
+
+            # if minimum is already less than it can be then skip rest
+            if (alpha is not None) and (min(scores) < alpha):
+                return min(scores)
+
         return min(scores)
 
     def max_value(self, game, depth, alpha=None, beta=None):
@@ -180,6 +187,10 @@ class IsolationPlayer:
         depth : int
             Depth is an integer representing the maximum number of plies to
             search from this point
+        alpha : float
+            Alpha limits the lower bound of search on minimizing layers
+        beta : float
+            Beta limits the upper bound of search on maximizing layers
 
         Returns
         -------
@@ -204,6 +215,11 @@ class IsolationPlayer:
             else:
                 score = self.min_value(forecast, depth - 1, alpha, beta)
             scores.append(score)
+
+            # if maximum is already more than it can be then skip rest
+            if (beta is not None) and (max(scores) > beta):
+                return max(scores)
+
         return max(scores)
 
 
@@ -311,7 +327,10 @@ class MinimaxPlayer(IsolationPlayer):
             values = list()
             for m in game.get_legal_moves():
                 g = game.forecast_move(m)
-                val = (self.min_value(g, depth - 1), m)
+                if depth > 1:
+                    val = (self.min_value(g, depth - 1), m)
+                else:
+                    val = (self.score(g, g.active_player), m)
                 values.append(val)
             min_values = list(map(lambda v: v[0], values))
             max_index = min_values.index(max(min_values))
@@ -433,8 +452,12 @@ class AlphaBetaPlayer(IsolationPlayer):
             values = list()
             for m in game.get_legal_moves():
                 g = game.forecast_move(m)
+                # pass and update alpha, beta values after each iteration
                 val = (self.min_value(g, depth - 1, alpha, beta), m)
                 values.append(val)
+                # update lower bound
+                alpha = max(list(map(lambda v: v[0], values)))
+
             min_values = list(map(lambda v: v[0], values))
             max_index = min_values.index(max(min_values))
             best_move = values[max_index][1]
