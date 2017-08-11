@@ -97,5 +97,6 @@ ENV/
 # End of https://www.gitignore.io/api/python
 
 .idea/
-
+isolation-*.zip
+isolation-result-*.json
 .~lock*
