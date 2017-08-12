@@ -162,10 +162,13 @@ class IsolationPlayer:
         if self.terminal_test(game):
             return v
 
+        if depth < 1:
+            return v
+
         scores = list()
         for m in game.get_legal_moves():
             forecast = game.forecast_move(m)
-            if depth < 1:
+            if depth < 2:
                 score = self.score(forecast, forecast.active_player)
             else:
                 score = self.max_value(forecast, depth - 1, alpha, beta)
@@ -207,11 +210,14 @@ class IsolationPlayer:
         if self.terminal_test(game):
             return v
 
+        if depth < 1:
+            return v
+
         scores = list()
         for m in game.get_legal_moves():
             forecast = game.forecast_move(m)
-            if depth < 1:
-                score = self.score(forecast, forecast.inactive_player)
+            if depth < 2:
+                score = self.score(forecast, forecast.inactive_player)  # calculate score of player that started minimax
             else:
                 score = self.min_value(forecast, depth - 1, alpha, beta)
             scores.append(score)
@@ -326,11 +332,11 @@ class MinimaxPlayer(IsolationPlayer):
         if depth > 0:
             values = list()
             for m in game.get_legal_moves():
-                g = game.forecast_move(m)
+                forecast = game.forecast_move(m)
                 if depth > 1:
-                    val = (self.min_value(g, depth - 1), m)
+                    val = (self.min_value(forecast, depth - 1), m)
                 else:
-                    val = (self.score(g, g.active_player), m)
+                    val = (self.score(forecast, forecast.inactive_player), m)
                 values.append(val)
             min_values = list(map(lambda v: v[0], values))
             max_index = min_values.index(max(min_values))

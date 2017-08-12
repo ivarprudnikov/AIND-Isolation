@@ -16,10 +16,10 @@ basic_player_2 = "Player2"
 class IsolationTest(unittest.TestCase):
     """Unit tests for isolation agents"""
 
-    def setup_game(self, p1, p2):
+    def setup_game(self, p1, p2, width=7, height=7):
         self.p1 = p1
         self.p2 = p2
-        self.game = isolation.Board(self.p1, self.p2)
+        self.game = isolation.Board(self.p1, self.p2, width, height)
 
     def setUp(self):
         reload(game_agent)
@@ -170,6 +170,44 @@ class IsolationTest(unittest.TestCase):
         self.assertFalse(self.game.is_loser(self.p1))
         self.assertFalse(self.game.is_loser(self.p2))
         self.assertEqual(game_agent.custom_score(self.game, self.p1), 7)
+
+    def test_minimax_calculates_optimal_move_with_bigger_board(self):
+        """
+             0   1   2   3   4   5   6   7   8
+        0  |   |   |   |   |   |   |   |   |   |
+        1  |   |   |   |   |   |   |   |   |   |
+        2  |   |   |   |   |   |   | - |   |   |
+        3  |   |   | - |   |   | - |   |   |   |
+        4  |   |   | - | - | - | - |   |   |   |
+        5  |   |   |   | - | 2 |   |   |   |   |
+        6  |   |   |   | - | - | 1 |   |   |   |
+        7  |   |   |   |   |   |   |   |   |   |
+        8  |   |   |   |   |   |   |   |   |   |
+        """
+        self.setup_game(game_agent.MinimaxPlayer(), game_agent.MinimaxPlayer(), 9, 9)
+        filling_moves = list()
+        filling_moves.append((3, 2))
+        filling_moves.append((4, 2))
+        filling_moves.append((4, 3))
+        filling_moves.append((5, 3))
+        filling_moves.append((6, 3))
+        filling_moves.append((4, 4))
+        filling_moves.append((6, 4))
+        filling_moves.append((3, 5))
+        filling_moves.append((4, 5))
+        filling_moves.append((2, 6))
+        filling_moves.append((6, 5))  # player 1
+        filling_moves.append((5, 4))  # player 2
+        for m in filling_moves:
+            self.game.apply_move(m)
+
+        print(self.game.to_string())
+
+        self.assertTrue(self.p1 == self.game.active_player)
+        self.assertFalse(self.game.is_loser(self.p1))
+        self.assertFalse(self.game.is_loser(self.p2))
+
+        self.assertEqual(self.p1.minimax(self.game, 1), (4, 6))
 
 
 if __name__ == '__main__':
