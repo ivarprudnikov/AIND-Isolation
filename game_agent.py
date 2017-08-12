@@ -3,6 +3,7 @@ test your agent's strength against a set of known agents using tournament.py
 and include the results in your report.
 """
 
+
 class SearchTimeout(Exception):
     """Subclass base exception for code clarity. """
     pass
@@ -32,7 +33,7 @@ def custom_score(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    return len(game.get_legal_moves(player))
+    return float(len(game.get_legal_moves(player)))
 
 
 def custom_score_2(game, player):
@@ -115,6 +116,8 @@ class IsolationPlayer:
         self.score = score_fn
         self.time_left = None
         self.TIMER_THRESHOLD = timeout
+        self.alpha = None
+        self.beta = None
 
     def terminal_test(self, game):
         """
@@ -132,7 +135,7 @@ class IsolationPlayer:
         """
         return not bool(game.get_legal_moves())
 
-    def min_value(self, game, depth, alpha=None, beta=None):
+    def min_value(self, game, depth):
         """
         Parameters
         ----------
@@ -159,28 +162,35 @@ class IsolationPlayer:
         if callable(self.time_left) and self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
-        if self.terminal_test(game):
-            return v
+        if not self.terminal_test(game) and depth > 0:
 
-        if depth < 1:
-            return v
+            scores = list()
+            for m in game.get_legal_moves():
+                forecast = game.forecast_move(m)
+                if depth == 1:
+                    score = self.score(forecast, forecast.active_player)
+                else:
+                    score = self.max_value(forecast, depth - 1)
+                scores.append(score)
 
-        scores = list()
-        for m in game.get_legal_moves():
-            forecast = game.forecast_move(m)
-            if depth < 2:
-                score = self.score(forecast, forecast.active_player)
-            else:
-                score = self.max_value(forecast, depth - 1, alpha, beta)
-            scores.append(score)
+                v = min(scores)
 
-            # if minimum is already less than it can be then skip rest
-            if (alpha is not None) and (min(scores) < alpha):
-                return min(scores)
+                # if minimum is already less than it can be then skip rest
+                if (self.alpha is not None) and (v <= self.alpha):
+                    print("Skipping because min {} is less than alpha {}".format(min(scores), self.alpha))
+                    break
 
-        return min(scores)
+                if (self.alpha is not None) and (v > self.alpha):
+                    self.alpha = v
 
-    def max_value(self, game, depth, alpha=None, beta=None):
+            # update upper bound
+            if (self.beta is not None) and (v < self.beta) and (v >= self.alpha):
+                print("beta updated to {}".format(v))
+                self.beta = v
+
+        return v
+
+    def max_value(self, game, depth):
         """
         Parameters
         ----------
@@ -207,27 +217,30 @@ class IsolationPlayer:
         if callable(self.time_left) and self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
-        if self.terminal_test(game):
-            return v
+        if not self.terminal_test(game) and depth > 0:
 
-        if depth < 1:
-            return v
+            scores = list()
+            for m in game.get_legal_moves():
+                forecast = game.forecast_move(m)
+                if depth == 1:
+                    score = self.score(forecast, forecast.inactive_player)  # calculate score of player that started minimax
+                else:
+                    score = self.min_value(forecast, depth - 1)
+                scores.append(score)
 
-        scores = list()
-        for m in game.get_legal_moves():
-            forecast = game.forecast_move(m)
-            if depth < 2:
-                score = self.score(forecast, forecast.inactive_player)  # calculate score of player that started minimax
-            else:
-                score = self.min_value(forecast, depth - 1, alpha, beta)
-            scores.append(score)
+                # if maximum is already more than it can be then skip rest
+                if (self.beta is not None) and (max(scores) >= self.beta):
+                    print("Skipping because max {} is bigger than beta {}".format(max(scores), self.beta))
+                    break
 
-            # if maximum is already more than it can be then skip rest
-            if (beta is not None) and (max(scores) > beta):
-                return max(scores)
+            v = max(scores)
 
-        return max(scores)
+            # update lower bound
+            if (self.alpha is not None) and (v > self.alpha) and (v <= self.beta):
+                print("alpha updated to {}".format(v))
+                self.alpha = v
 
+        return v
 
 class MinimaxPlayer(IsolationPlayer):
     """Game-playing agent that chooses a move using depth-limited minimax
@@ -449,6 +462,9 @@ class AlphaBetaPlayer(IsolationPlayer):
                 each helper function or else your agent will timeout during
                 testing.
         """
+        self.alpha = alpha
+        self.beta = beta
+        print("alpha and beta assigned {} {}".format(alpha, beta))
         best_move = (-1, -1)
 
         if callable(self.time_left) and self.time_left() < self.TIMER_THRESHOLD:
@@ -457,15 +473,26 @@ class AlphaBetaPlayer(IsolationPlayer):
         if depth > 0:
             values = list()
             for m in game.get_legal_moves():
-                g = game.forecast_move(m)
-                # pass and update alpha, beta values after each iteration
-                val = (self.min_value(g, depth - 1, alpha, beta), m)
+                forecast = game.forecast_move(m)
+                if depth > 1:
+                    val = (self.min_value(forecast, depth - 1), m)
+                else:
+                    val = (self.score(forecast, forecast.inactive_player), m)
                 values.append(val)
-                # update lower bound
-                alpha = max(list(map(lambda v: v[0], values)))
 
-            min_values = list(map(lambda v: v[0], values))
-            max_index = min_values.index(max(min_values))
-            best_move = values[max_index][1]
+                # if maximum is already more than it can be then skip rest
+                if (beta is not None) and (max(values)[0] >= beta):
+                    print("Skipping because max {} is more than beta {}".format(max(values)[0], beta))
+                    break
+
+            v, best_move = max(values)
+
+            # update lower bound
+            print("alpha updated to {}".format(v))
+            self.alpha = v
+
+            # update upper bound
+            print("beta updated to {}".format(v))
+            self.beta = v
 
         return best_move

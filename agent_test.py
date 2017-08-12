@@ -209,6 +209,66 @@ class IsolationTest(unittest.TestCase):
 
         self.assertEqual(self.p1.minimax(self.game, 1), (4, 6))
 
+    def test_alphabeta_optimal_move_with_depth_1_and_9x9_board(self):
+        """
+             0   1   2   3   4   5   6   7   8
+        0  |   |   |   |   |   |   |   |   |   |
+        1  |   |   |   |   |   |   |   |   |   |
+        2  |   |   | - | - |   |   |   |   |   |
+        3  |   |   |   |   | - | - | - |   |   |
+        4  |   | 1 | - | - | - | - | - |   |   |
+        5  |   |   | - |   | - | - |   |   |   |
+        6  |   |   |   | - | - | 2 | - |   |   |
+        7  |   |   |   |   |   |   |   |   |   |
+        8  |   |   |   |   |   |   |   |   |   |
+        """
+        self.setup_game(game_agent.AlphaBetaPlayer(), game_agent.AlphaBetaPlayer(), 9, 9)
+        filling_moves = ((2, 2), (4, 2), (5, 2), (2, 3), (4, 3), (6, 3), (3, 4), (4, 4), (5, 4),
+                         (6, 4), (3, 5), (4, 5), (5, 5), (3, 6), (4, 6), (6, 6), (4, 1), (6, 5))
+        for m in filling_moves:
+            self.game.apply_move(m)
+
+        print(self.game.to_string())
+
+        self.assertTrue(self.p1 == self.game.active_player)
+        self.assertFalse(self.game.is_loser(self.p1))
+        self.assertFalse(self.game.is_loser(self.p2))
+
+        self.assertEqual(self.p1.alphabeta(self.game, 1), (6, 2))
+
+    def test_alphabeta_optimal_move_with_depth_2_and_9x9_board(self):
+        """
+             0   1   2   3   4   5   6   7   8
+        0  |   |   |   |   |   |   |   |   |   |
+        1  |   |   |   |   |   | - |   |   |   |
+        2  |   |   |   | - | - | - |   |   |   |
+        3  |   |   | - | - | - | - | 2 |   |   |
+        4  |   |   | - | - |   |   | - |   |   |
+        5  |   |   | - | - |   |   | - |   |   |
+        6  |   |   |   | 1 | - | - |   |   |   |
+        7  |   |   |   |   |   |   |   |   |   |
+        8  |   |   |   |   |   |   |   |   |   |
+        """
+        self.setup_game(game_agent.AlphaBetaPlayer(), game_agent.AlphaBetaPlayer(), 9, 9)
+        filling_moves = ((3, 2), (4, 2), (5, 2), (2, 3), (3, 3), (4, 3), (5, 3), (2, 4), (3, 4), (6, 4),
+                         (1, 5), (2, 5), (3, 5), (6, 5), (4, 6), (5, 6), (6, 3), (3, 6))
+        for m in filling_moves:
+            self.game.apply_move(m)
+
+        print(self.game.to_string())
+
+        self.assertTrue(self.p1 == self.game.active_player)
+        self.assertFalse(self.game.is_loser(self.p1))
+        self.assertFalse(self.game.is_loser(self.p2))
+
+        # (5, 5) or (7, 5)
+        alpha = -10.
+        beta = 10.
+        result = self.p1.alphabeta(self.game, 2, alpha, beta)
+        self.assertIn(result, ((5, 5), (7, 5)))
+        self.assertEqual(self.p1.alpha, 4)
+        self.assertEqual(self.p1.beta, 4)
+
 
 if __name__ == '__main__':
     unittest.main()
