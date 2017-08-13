@@ -140,37 +140,6 @@ class IsolationTest(unittest.TestCase):
         self.assertTrue(result[0] == 2 or result[0] == 4)
         self.assertEqual(result[1], 6)
 
-    def test_minimax_visits_7_nodes_when_depth_is_1(self):
-        """      0   1   2   3   4   5   6
-            0  |   |   |   |   |   |   |   |
-            1  |   |   | - | - |   |   |   |
-            2  | - | 2 | - | - |   |   |   |
-            3  | - | - |   |   | - |   |   |
-            4  |   |   |   |   | 1 |   |   |
-            5  |   |   |   |   |   |   |   |
-            6  |   |   |   |   |   |   |   |
-            """
-        self.setup_game(game_agent.MinimaxPlayer(), game_agent.MinimaxPlayer())
-        filling_moves = list()
-        filling_moves.append((2, 0))
-        filling_moves.append((3, 0))
-        filling_moves.append((3, 1))
-        filling_moves.append((1, 2))
-        filling_moves.append((2, 2))
-        filling_moves.append((1, 3))
-        filling_moves.append((2, 3))
-        filling_moves.append((3, 4))
-        filling_moves.append((4, 4))
-        filling_moves.append((2, 1))
-        for m in filling_moves:
-            self.game.apply_move(m)
-
-        print(self.game.to_string())
-        self.assertTrue(self.p1 == self.game.active_player)
-        self.assertFalse(self.game.is_loser(self.p1))
-        self.assertFalse(self.game.is_loser(self.p2))
-        self.assertEqual(game_agent.custom_score(self.game, self.p1), 7)
-
     def test_minimax_calculates_optimal_move_with_bigger_board(self):
         """
              0   1   2   3   4   5   6   7   8
@@ -236,6 +205,34 @@ class IsolationTest(unittest.TestCase):
 
         self.assertEqual(self.p1.alphabeta(self.game, 1), (6, 2))
 
+    def test_alphabeta_optimal_move_with_depth_1_and_9x9_board_2(self):
+        """
+             0   1   2   3   4   5   6   7   8
+        0  |   |   |   |   |   |   |   |   |   |
+        1  |   |   |   |   |   |   |   |   |   |
+        2  |   |   |   | - |   |   |   |   |   |
+        3  |   |   |   |   | - | - |   |   |   |
+        4  |   |   |   | 2 | - | 1 | - |   |   |
+        5  |   |   |   | - | - |   |   |   |   |
+        6  |   |   |   | - |   |   |   |   |   |
+        7  |   |   |   |   |   |   |   |   |   |
+        8  |   |   |   |   |   |   |   |   |   |
+        """
+        self.setup_game(game_agent.AlphaBetaPlayer(), game_agent.AlphaBetaPlayer(), 9, 9)
+        filling_moves = ((2, 3), (5, 3), (6, 3), (3, 4), (4, 4), (5, 4), (3, 5),
+                         (4, 6), (4, 5), (4, 3))
+        for m in filling_moves:
+            self.game.apply_move(m)
+
+        print(self.game.to_string())
+
+        self.assertTrue(self.p1 == self.game.active_player)
+        self.assertFalse(self.game.is_loser(self.p1))
+        self.assertFalse(self.game.is_loser(self.p2))
+
+        result = self.p1.alphabeta(self.game, 1)
+        self.assertIn(result, ((2, 4), (6, 4)))
+
     def test_alphabeta_optimal_move_with_depth_2_and_9x9_board(self):
         """
              0   1   2   3   4   5   6   7   8
@@ -266,8 +263,6 @@ class IsolationTest(unittest.TestCase):
         beta = 10.
         result = self.p1.alphabeta(self.game, 2, alpha, beta)
         self.assertIn(result, ((5, 5), (7, 5)))
-        self.assertEqual(self.p1.alpha, 4)
-        self.assertEqual(self.p1.beta, 4)
 
 
 if __name__ == '__main__':
