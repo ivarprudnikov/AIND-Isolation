@@ -178,6 +178,35 @@ class IsolationTest(unittest.TestCase):
 
         self.assertEqual(self.p1.minimax(self.game, 1), (4, 6))
 
+    def test_minimax_optimal_move_with_depth_3_and_9x9_board(self):
+        """
+             0   1   2   3   4   5   6   7   8
+        0  |   |   |   |   |   |   |   |   |   |
+        1  |   |   | - | - | 2 |   |   |   |   |
+        2  | - | - | - | - | - | - |   |   |   |
+        3  |   | - | - | - | - | - | - |   |   |
+        4  |   |   | - |   | - | - | - |   |   |
+        5  |   | 1 | - | - | - |   | - |   |   |
+        6  |   |   | - |   | - | - |   |   |   |
+        7  |   |   |   |   | - |   |   |   |   |
+        8  |   |   |   |   |   |   |   |   |   |
+        """
+        self.setup_game(game_agent.MinimaxPlayer(), game_agent.MinimaxPlayer(), 9, 9)
+        filling_moves = ((1, 2), (1, 3), (2, 0), (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (3, 1),
+                         (3, 2), (3, 3), (3, 4), (3, 5), (3, 6), (4, 2), (4, 4), (4, 5), (4, 6),
+                         (5, 2), (5, 3), (5, 4), (5, 6), (6, 2), (6, 4), (6, 5), (7, 4), (5, 1), (1, 4))
+        for m in filling_moves:
+            self.game.apply_move(m)
+
+        print(self.game.to_string())
+
+        self.assertTrue(self.p1 == self.game.active_player)
+        self.assertFalse(self.game.is_loser(self.p1))
+        self.assertFalse(self.game.is_loser(self.p2))
+
+        result = self.p1.minimax(self.game, 3)
+        self.assertIn(result, ((4, 3), (6, 3)))
+
     def test_alphabeta_optimal_move_with_depth_1_and_9x9_board(self):
         """
              0   1   2   3   4   5   6   7   8
