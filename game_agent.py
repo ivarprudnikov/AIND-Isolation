@@ -508,24 +508,14 @@ class AlphaBetaPlayer(IsolationPlayer):
 
         if depth > 0 and len(game.get_legal_moves()) > 0:
             v = float("-inf")
-            values = list()
             for m in game.get_legal_moves():
-                forecast = game.forecast_move(m)
-                if depth == 1:
-                    val = (self.score(forecast, forecast.inactive_player), m)
-                else:
-                    val = (self.min_value(forecast, depth - 1, alpha, beta), m)
-                values.append(val)
-
-                score, move = max(values)
-                if score > v:
-                    v = score
-                    best_move = move
+                v = self.min_value(game.forecast_move(m), depth - 1, alpha, beta)
 
                 # update lower bound
                 if v > alpha:
                     print("alpha updated to {}".format(v))
                     self.alpha = alpha = v
+                    best_move = m
 
                 # if maximum is already more than it can be then skip rest
                 if v >= beta:
