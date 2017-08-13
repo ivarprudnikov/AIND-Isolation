@@ -42,6 +42,24 @@ def custom_score(game, player):
     own_moves = len(game.get_legal_moves(player))
     opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
 
+    """
+    TODO: add more parameters for evaluation: 
+    - moves so far, 
+    - how close to center, 
+    - how far from opponent, 
+    - how close to the edge of board
+    - how many open spaces left
+    - how many open moves left on the board
+    """
+
+    """
+    TODO: store scores of all similar games: 
+    - this game, 
+    - this game with switched players, 
+    - mirrored games with both players
+    - rotated games with both players
+    """
+
     return own_moves * 2 - opp_moves * 0.5
 
 
@@ -128,7 +146,7 @@ class IsolationPlayer:
         self.alpha = None
         self.beta = None
 
-    def terminal_test(self, game):
+    def terminal_test(self, game, depth=None):
         """
         Parameters
         ----------
@@ -142,6 +160,9 @@ class IsolationPlayer:
             Return True if the game is over for the active player
             and False otherwise.
         """
+        if (depth is not None) and (depth == 0):
+            return True
+
         return not bool(game.get_legal_moves())
 
     def min_value(self, game, depth, alpha=None, beta=None):
@@ -166,34 +187,37 @@ class IsolationPlayer:
             otherwise return the minimum value over all legal child
             nodes.
         """
-        v = 100
+
+        """
+        function MIN-VALUE(state, alpha, beta) returns a utility value
+            if TERMINAL-TEST(state) the return UTILITY(state)
+            v = infinity
+            for each a in ACTIONS(state) do
+                v = MIN(v, MAX-VALUE(RESULT(state, a), alpha, beta))
+                if v <= alpha then return v
+                beta = MIN(beta, v)
+            return v
+        """
+        v = float("inf")
 
         if callable(self.time_left) and self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
-        if not self.terminal_test(game) and depth > 0:
+        if self.terminal_test(game, depth):
+            return self.score(game, self)
 
-            scores = list()
-            for m in game.get_legal_moves():
-                forecast = game.forecast_move(m)
-                if depth == 1:
-                    score = self.score(forecast, forecast.active_player)
-                else:
-                    score = self.max_value(forecast, depth - 1, alpha, beta)
-                scores.append(score)
+        for m in game.get_legal_moves():
 
-                if min(scores) < v:
-                    v = min(scores)
+            v = min(v, self.max_value(game.forecast_move(m), depth - 1, alpha, beta))
 
-                # update upper bound
-                if (beta is not None) and (v < beta):
-                    print("beta updated to {}".format(v))
-                    beta = v
+            # if maximum is already more than it can be then skip rest
+            if (alpha is not None) and (v <= alpha):
+                print("Skipping because min {} is less than alpha {}".format(v, alpha))
+                break
 
-                # if maximum is already more than it can be then skip rest
-                if (alpha is not None) and (v <= alpha):
-                    print("Skipping because min {} is less than alpha {}".format(v, alpha))
-                    break
+            # update upper bound
+            if beta is not None:
+                beta = min(beta, v)
 
         return v
 
@@ -219,36 +243,41 @@ class IsolationPlayer:
             otherwise return the maximum value over all legal child
             nodes.
         """
-        v = -1
+
+        """
+        function MAX-VALUE(state, alpha, beta) returns a utility value
+            if TERMINAL-TEST(state) the return UTILITY(state)
+            v = -infinity
+            for each a in ACTIONS(state) do
+            v = MAX(v, MIN-VALUE(RESULT(state, a), alpha, beta))
+                if v >= beta then return v
+                alpha = MAX(alpha, v)
+            return v
+        """
+
+        v = float("-inf")
 
         if callable(self.time_left) and self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
-        if not self.terminal_test(game) and depth > 0:
+        if self.terminal_test(game, depth):
+            return self.score(game, self)
 
-            scores = list()
-            for m in game.get_legal_moves():
-                forecast = game.forecast_move(m)
-                if depth == 1:
-                    score = self.score(forecast, forecast.inactive_player)  # calculate score of player that started minimax
-                else:
-                    score = self.min_value(forecast, depth - 1, alpha, beta)
-                scores.append(score)
+        for m in game.get_legal_moves():
 
-                if max(scores) > v:
-                    v = max(scores)
+            v = max(v, self.min_value(game.forecast_move(m), depth - 1, alpha, beta))
 
-                # update lower bound
-                if (alpha is not None) and (v > alpha):
-                    print("alpha updated to {}".format(v))
-                    alpha = v
+            # if maximum is already more than it can be then skip rest
+            if (beta is not None) and (v >= beta):
+                print("Skipping because max {} is more than beta {}".format(v, beta))
+                break
 
-                # if maximum is already more than it can be then skip rest
-                if (beta is not None) and (v >= beta):
-                    print("Skipping because max {} is more than beta {}".format(v, beta))
-                    break
+            # update lower bound
+            if alpha is not None:
+                alpha = max(alpha, v)
 
         return v
+
 
 class MinimaxPlayer(IsolationPlayer):
     """Game-playing agent that chooses a move using depth-limited minimax
@@ -424,6 +453,9 @@ class AlphaBetaPlayer(IsolationPlayer):
         return best_move
 
     def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf")):
+
+        # TODO: fix pruning at deeper levels
+
         """Implement depth-limited minimax search with alpha-beta pruning as
         described in the lectures.
 
