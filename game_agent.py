@@ -454,8 +454,6 @@ class AlphaBetaPlayer(IsolationPlayer):
 
     def alphabeta(self, game, depth, alpha=float("-inf"), beta=float("inf")):
 
-        # TODO: fix pruning at deeper levels
-
         """Implement depth-limited minimax search with alpha-beta pruning as
         described in the lectures.
 
