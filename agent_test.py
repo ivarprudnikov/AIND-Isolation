@@ -24,6 +24,25 @@ class IsolationTest(unittest.TestCase):
     def setUp(self):
         reload(game_agent)
 
+    def test_centerness(self):
+        """
+             0   1   2   3   4   5   6   7   8
+        0  |   |   |   |   |   |   |   |   |   |
+        1  |   |   |   |   |   |   |   |   |   |
+        2  |   |   |   |   |   |   |   |   |   |
+        3  |   |   |   |   |   |   |   |   |   |
+        4  |   |   |   |   | 1 |   |   |   |   |
+        5  |   |   |   |   |   |   |   |   |   |
+        6  |   |   | 2 |   |   |   |   |   |   |
+        7  |   |   |   |   |   |   |   |   |   |
+        8  |   |   |   |   |   |   |   |   |   |
+        """
+        self.setup_game(game_agent.MinimaxPlayer(), game_agent.MinimaxPlayer(), 9, 9)
+        self.game.apply_move((4, 4))
+        self.game.apply_move((6, 2))
+        self.assertEqual(game_agent.centerness(self.game, self.p1), 1)
+        self.assertEqual("{0:.3f}".format(game_agent.centerness(self.game, self.p2)), "0.354")
+
     def test_player2_moves_after_player1(self):
         self.setup_game(basic_player_1, basic_player_2)
         self.game.apply_move((2, 3))

@@ -2,6 +2,7 @@
 test your agent's strength against a set of known agents using tournament.py
 and include the results in your report.
 """
+import math
 
 
 class SearchTimeout(Exception):
@@ -44,11 +45,8 @@ def custom_score(game, player):
 
     """
     TODO: add more parameters for evaluation: 
-    - moves so far, 
-    - how close to center, 
-    - how far from opponent, 
-    - how close to the edge of board
-    - how many open spaces left
+    - moves so far - game.move_count
+    - how many open spaces left - game.get_blank_spaces
     - how many open moves left on the board
     """
 
@@ -85,8 +83,16 @@ def custom_score_2(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # TODO: finish this function!
-    raise NotImplementedError
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+
+    own_centerness = centerness(game, player)
+    opp_centerness = centerness(game, game.get_opponent(player))
+
+    return own_centerness * 2 - opp_centerness * 0.5
 
 
 def custom_score_3(game, player):
@@ -111,8 +117,68 @@ def custom_score_3(game, player):
     float
         The heuristic value of the current game state to the specified player.
     """
-    # TODO: finish this function!
-    raise NotImplementedError
+    if game.is_loser(player):
+        return float("-inf")
+
+    if game.is_winner(player):
+        return float("inf")
+
+    p1 = player
+    p2 = game.get_opponent(player)
+    pos_p1 = game.get_player_location(p1)
+    pos_p2 = game.get_player_location(p2)
+    return distance_between(pos_p1, pos_p2)
+
+
+def centerness(game, player):
+    """
+    Parameters
+    ----------
+    game : `isolation.Board`
+        An instance of `isolation.Board` encoding the current state of the
+        game (e.g., player locations and blocked cells).
+
+    player : object
+        A player instance in the current game (i.e., an object corresponding to
+        one of the player objects `game.__player_1__` or `game.__player_2__`.)
+
+    Returns
+    -------
+    float
+        Distance from center
+    """
+    current_location = game.get_player_location(player)
+
+    center_row_idx = game.height/2-0.5
+    center_col_idx = game.width/2-0.5
+    center_location = (center_row_idx, center_col_idx)
+
+    if current_location == center_location:
+        return 1.
+
+    distance_from_center = distance_between(center_location, current_location)
+
+    return 1/distance_from_center
+
+
+def distance_between(pos1, pos2):
+    """
+    Parameters
+    ----------
+    pos1 : float, float
+        Position
+    pos2 : float, float
+        Position
+
+    Returns
+    -------
+    float
+        Distance between positions
+    """
+    if pos1 == pos2:
+        return 0.
+
+    return math.sqrt((pos1[0] - pos2[0])**2 + (pos1[1] - pos2[1])**2)
 
 
 class IsolationPlayer:
@@ -160,6 +226,9 @@ class IsolationPlayer:
             Return True if the game is over for the active player
             and False otherwise.
         """
+        if callable(self.time_left) and self.time_left() < self.TIMER_THRESHOLD:
+            raise SearchTimeout()
+
         if (depth is not None) and (depth == 0):
             return True
 
@@ -212,7 +281,6 @@ class IsolationPlayer:
 
             # if maximum is already more than it can be then skip rest
             if (alpha is not None) and (v <= alpha):
-                print("Skipping because min {} is less than alpha {}".format(v, alpha))
                 break
 
             # update upper bound
@@ -269,7 +337,6 @@ class IsolationPlayer:
 
             # if maximum is already more than it can be then skip rest
             if (beta is not None) and (v >= beta):
-                print("Skipping because max {} is more than beta {}".format(v, beta))
                 break
 
             # update lower bound
@@ -328,7 +395,6 @@ class MinimaxPlayer(IsolationPlayer):
             return self.minimax(game, self.search_depth)
 
         except SearchTimeout:
-            print("SearchTimeout")
             moves = game.get_legal_moves()
             if len(moves) > 0:
                 best_move = moves[0]  # whatever move to keep playing
@@ -447,7 +513,6 @@ class AlphaBetaPlayer(IsolationPlayer):
                 depth += 1
 
         except SearchTimeout:
-            print("SearchTimeout")
             pass
 
         return best_move
@@ -498,7 +563,6 @@ class AlphaBetaPlayer(IsolationPlayer):
                 each helper function or else your agent will timeout during
                 testing.
         """
-        print("alpha and beta received {} {}".format(alpha, beta))
         best_move = (-1, -1)
 
         if callable(self.time_left) and self.time_left() < self.TIMER_THRESHOLD:
@@ -511,17 +575,14 @@ class AlphaBetaPlayer(IsolationPlayer):
 
                 # update lower bound
                 if v > alpha:
-                    print("alpha updated to {}".format(v))
                     self.alpha = alpha = v
                     best_move = m
 
                 # if maximum is already more than it can be then skip rest
                 if v >= beta:
-                    print("Skipping because max {} is more than beta {}".format(v, beta))
                     break
 
             # update upper bound
-            print("beta updated to {}".format(v))
             self.beta = beta = v
 
         return best_move
