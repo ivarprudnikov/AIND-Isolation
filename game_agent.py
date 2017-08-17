@@ -5,6 +5,9 @@ and include the results in your report.
 import math
 
 
+SCORES = dict()
+
+
 class SearchTimeout(Exception):
     """Subclass base exception for code clarity. """
     pass
@@ -40,25 +43,44 @@ def custom_score(game, player):
     if game.is_winner(player):
         return float("inf")
 
-    own_moves = len(game.get_legal_moves(player))
-    opp_moves = len(game.get_legal_moves(game.get_opponent(player)))
+    global SCORES
+    game_hash = game.hash()
+    if game_hash in SCORES:
+        return SCORES[game_hash]
 
-    """
-    TODO: add more parameters for evaluation: 
-    - moves so far - game.move_count
-    - how many open spaces left - game.get_blank_spaces
-    - how many open moves left on the board
-    """
+    p1 = player
+    p2 = game.get_opponent(player)
 
-    """
-    TODO: store scores of all similar games: 
-    - this game, 
-    - this game with switched players, 
-    - mirrored games with both players
-    - rotated games with both players
-    """
+    p1_legal_moves = game.get_legal_moves(p1)
+    p2_legal_moves = game.get_legal_moves(p2)
 
-    return own_moves * 2 - opp_moves * 0.5
+    p1_moves_weight = 0.5
+    p2_moves_weight = 0.4
+
+    p1_moves_score = len(p1_legal_moves) * p1_moves_weight
+    p2_moves_score = len(p2_legal_moves) * p2_moves_weight
+
+    moves_score = p1_moves_score - p2_moves_score
+
+    game_progress = get_game_progress(game)
+    centerness_score = 0
+
+    if game_progress < 0.4:
+        c_weight = centerness_weight(game)
+        p1_centerness = centerness(game, p1)
+        p2_centerness = centerness(game, p2)
+        centerness_score = (p1_centerness - p2_centerness) * c_weight
+
+    attack_score = 0.01 if game.get_player_location(p1) in game._Board__get_moves(game.get_player_location(p2)) else 0
+
+    sum_of_p1_deeper_moves = nested_available_moves_impact(game, p1)
+    sum_of_p2_deeper_moves = nested_available_moves_impact(game, p2)
+    deeper_score = sum_of_p1_deeper_moves - sum_of_p2_deeper_moves
+    val = centerness_score + moves_score + attack_score + deeper_score
+
+    SCORES[game_hash] = val
+
+    return val
 
 
 def custom_score_2(game, player):
@@ -130,6 +152,30 @@ def custom_score_3(game, player):
     return distance_between(pos_p1, pos_p2)
 
 
+def nested_available_moves_impact(game, player):
+    direct_moves = game.get_legal_moves(player)
+
+    level_1_moves = set()
+    for m in direct_moves:
+        level_1_moves = level_1_moves.union(game._Board__get_moves(m))
+
+    level_2_moves = set()
+    for m in level_1_moves:
+        level_2_moves = level_2_moves.union(game._Board__get_moves(m))
+
+    return len(set().union(direct_moves, level_1_moves, level_2_moves))
+
+
+def get_game_progress(game):
+    moves = game.move_count
+    size = game.width * game.height
+    return moves / size
+
+
+def centerness_weight(game):
+    return 1 / game.move_count
+
+
 def centerness(game, player):
     """
     Parameters
@@ -145,7 +191,7 @@ def centerness(game, player):
     Returns
     -------
     float
-        Distance from center
+        Distance from center score
     """
     current_location = game.get_player_location(player)
 
@@ -441,20 +487,21 @@ class MinimaxPlayer(IsolationPlayer):
                 testing.
         """
         best_move = (-1, -1)
+        score = float("-inf")
+        moves = game.get_legal_moves(self)
 
         if callable(self.time_left) and self.time_left() < self.TIMER_THRESHOLD:
             raise SearchTimeout()
 
         if depth > 0 and len(game.get_legal_moves()) > 0:
-            values = list()
-            for m in game.get_legal_moves():
-                forecast = game.forecast_move(m)
-                if depth > 1:
-                    val = (self.min_value(forecast, depth - 1), m)
-                else:
-                    val = (self.score(forecast, forecast.inactive_player), m)
-                values.append(val)
-            _, best_move = max(values)
+            for m in moves:
+                v = self.min_value(game.forecast_move(m), depth - 1)
+                if v > score:
+                    score = v
+                    best_move = m
+
+        if best_move == (-1, -1) and len(moves) > 0:
+            best_move = moves[0]
 
         return best_move
 
@@ -514,6 +561,11 @@ class AlphaBetaPlayer(IsolationPlayer):
 
         except SearchTimeout:
             pass
+
+        moves = game.get_legal_moves(self)
+
+        if best_move == (-1, -1) and len(moves) > 0:
+            best_move = moves[0]
 
         return best_move
 
