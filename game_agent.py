@@ -44,12 +44,17 @@ def custom_score(game, player):
         return float("inf")
 
     global SCORES
+
+    # retrieve score from cache if any
+
     game_hash = game.hash()
     if game_hash in SCORES:
         return SCORES[game_hash]
 
     p1 = player
     p2 = game.get_opponent(player)
+
+    # Calculates moves scores
 
     p1_legal_moves = game.get_legal_moves(p1)
     p2_legal_moves = game.get_legal_moves(p2)
@@ -62,6 +67,8 @@ def custom_score(game, player):
 
     moves_score = p1_moves_score - p2_moves_score
 
+    # Calculates centerness based on game progress
+
     game_progress = get_game_progress(game)
     centerness_score = 0
 
@@ -71,12 +78,16 @@ def custom_score(game, player):
         p2_centerness = centerness(game, p2)
         centerness_score = (p1_centerness - p2_centerness) * c_weight
 
+    # Fancy attack score, does not affect results too much
+
     attack_score = 0.01 if game.get_player_location(p1) in game._Board__get_moves(game.get_player_location(p2)) else 0
 
     sum_of_p1_deeper_moves = nested_available_moves_impact(game, p1)
     sum_of_p2_deeper_moves = nested_available_moves_impact(game, p2)
     deeper_score = sum_of_p1_deeper_moves - sum_of_p2_deeper_moves
     val = centerness_score + moves_score + attack_score + deeper_score
+
+    # store score
 
     SCORES[game_hash] = val
 
@@ -303,16 +314,6 @@ class IsolationPlayer:
             nodes.
         """
 
-        """
-        function MIN-VALUE(state, alpha, beta) returns a utility value
-            if TERMINAL-TEST(state) the return UTILITY(state)
-            v = infinity
-            for each a in ACTIONS(state) do
-                v = MIN(v, MAX-VALUE(RESULT(state, a), alpha, beta))
-                if v <= alpha then return v
-                beta = MIN(beta, v)
-            return v
-        """
         v = float("inf")
 
         if callable(self.time_left) and self.time_left() < self.TIMER_THRESHOLD:
@@ -358,17 +359,6 @@ class IsolationPlayer:
             nodes.
         """
 
-        """
-        function MAX-VALUE(state, alpha, beta) returns a utility value
-            if TERMINAL-TEST(state) the return UTILITY(state)
-            v = -infinity
-            for each a in ACTIONS(state) do
-            v = MAX(v, MIN-VALUE(RESULT(state, a), alpha, beta))
-                if v >= beta then return v
-                alpha = MAX(alpha, v)
-            return v
-        """
-
         v = float("-inf")
 
         if callable(self.time_left) and self.time_left() < self.TIMER_THRESHOLD:
@@ -398,6 +388,7 @@ class MinimaxPlayer(IsolationPlayer):
     minimax to return a good move before the search time limit expires.
     """
 
+    # use min/max from super class
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -512,6 +503,7 @@ class AlphaBetaPlayer(IsolationPlayer):
     make sure it returns a good move before the search time limit expires.
     """
 
+    # use min/max from super class
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
